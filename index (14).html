@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saints Relic Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --gold-dim: #7a6030;
+    --bg-deep: #080608;
+    --bg-dark: #0e0b10;
+    --bg-mid: #160d1a;
+    --bg-panel: #110d14;
+    --text: #e8dfc8;
+    --text-dim: #8c7f6a;
+    --crimson: #8b1a2a;
+    --crimson-light: #c42840;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'EB Garamond', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201,168,76,0.07) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    padding: 56px 0 40px;
+    position: relative;
+  }
+
+  .header-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .header-ornament .line {
+    height: 1px;
+    width: 120px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold), var(--gold-dim), transparent);
+  }
+
+  .header-ornament .diamond {
+    width: 8px; height: 8px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    box-shadow: 0 0 12px var(--gold);
+  }
+
+  h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, #8a6820 0%, #c9a84c 30%, #f0d980 55%, #c9a84c 75%, #7a5c1e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    text-shadow: none;
+    filter: drop-shadow(0 2px 24px rgba(201,168,76,0.3));
+  }
+
+  .subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 0.3em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  /* ── STEPS ── */
+  .steps-row {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin: 40px 0 48px;
+  }
+
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .step-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 18px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+
+  .step-pill.active {
+    border-color: var(--gold-dim);
+    background: rgba(201,168,76,0.06);
+  }
+
+  .step-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--gold-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: var(--gold-dim);
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .step-pill.active .step-num {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #080608;
+  }
+
+  .step-pill.done .step-num {
+    background: var(--gold-dim);
+    border-color: var(--gold-dim);
+    color: #080608;
+  }
+
+  .step-label {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+
+  .step-pill.active .step-label { color: var(--gold-light); }
+
+  .step-connector {
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold-dim), transparent);
+    opacity: 0.4;
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 2px;
+    padding: 36px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold-light), var(--gold-dim), transparent);
+  }
+
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(201,168,76,0.3), transparent);
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 1px dashed rgba(201,168,76,0.3);
+    border-radius: 2px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    background: rgba(201,168,76,0.02);
+  }
+
+  .upload-zone:hover, .upload-zone.dragging {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.05);
+    box-shadow: inset 0 0 40px rgba(201,168,76,0.04), 0 0 20px rgba(201,168,76,0.08);
+  }
+
+  .upload-zone input {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .upload-icon {
+    width: 56px; height: 56px;
+    margin: 0 auto 20px;
+    opacity: 0.5;
+  }
+
+  .upload-icon svg { width: 100%; height: 100%; }
+
+  .upload-title {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+  }
+
+  .upload-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* ── PREVIEW (after upload) ── */
+  .uploaded-preview {
+    display: none;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .uploaded-preview.visible { display: flex; }
+
+  .uploaded-thumb {
+    width: 100px; height: 100px;
+    object-fit: contain;
+    border: 1px solid var(--gold-dim);
+    background: repeating-conic-gradient(rgba(255,255,255,0.05) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+  }
+
+  .uploaded-info { flex: 1; }
+  .uploaded-name {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    color: var(--gold-light);
+    margin-bottom: 6px;
+  }
+
+  .btn-change {
+    background: none;
+    border: 1px solid var(--gold-dim);
+    color: var(--gold-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 7px 18px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+
+  .btn-change:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(201,168,76,0.05);
+  }
+
+  /* ── BACKGROUND GRID ── */
+  .bg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .bg-card {
+    position: relative;
+    aspect-ratio: 1;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 2px;
+    overflow: hidden;
+    transition: all 0.25s;
+  }
+
+  .bg-card img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s;
+  }
+
+  .bg-card:hover img { transform: scale(1.06); }
+
+  .bg-card:hover {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 16px rgba(201,168,76,0.15);
+  }
+
+  .bg-card.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 24px rgba(201,168,76,0.35);
+  }
+
+  .bg-card.selected::after {
+    content: '✦';
+    position: absolute;
+    top: 6px; right: 8px;
+    color: var(--gold);
+    font-size: 14px;
+    text-shadow: 0 0 8px var(--gold);
+    pointer-events: none;
+  }
+
+  .bg-label {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    padding: 20px 8px 8px;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(232,215,200,0.8);
+    text-align: center;
+  }
+
+  /* ── COMING SOON CARDS ── */
+  .bg-card.coming-soon {
+    cursor: default;
+    background: #1a1a1a;
+    border-color: rgba(255,255,255,0.06);
+    pointer-events: none;
+  }
+
+  .bg-card.coming-soon:hover { border-color: rgba(255,255,255,0.06); box-shadow: none; }
+  .bg-card.coming-soon:hover img { transform: none; }
+
+  .coming-soon-inner {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, #1c1c1c 0%, #252525 50%, #1a1a1a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle grid texture */
+  .coming-soon-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Red diagonal banner */
+  .coming-soon-banner {
+    position: absolute;
+    left: -30%;
+    right: -30%;
+    top: 50%;
+    transform: translateY(-50%) rotate(-35deg);
+    background: linear-gradient(90deg, #8b0000, #cc1111 40%, #e01515 50%, #cc1111 60%, #8b0000);
+    padding: 9px 0;
+    text-align: center;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.6), 0 -1px 0 rgba(255,80,80,0.2);
+    z-index: 2;
+  }
+
+  .coming-soon-banner::before,
+  .coming-soon-banner::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: rgba(255,150,150,0.3);
+  }
+  .coming-soon-banner::before { left: 20px; }
+  .coming-soon-banner::after  { right: 20px; }
+
+  .coming-soon-text {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    color: #fff;
+    text-transform: uppercase;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    position: relative;
+    z-index: 3;
+  }
+
+  /* ── GENERATE BUTTON ── */
+  .generate-wrap {
+    text-align: center;
+    margin: 36px 0 0;
+  }
+
+  .btn-generate {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 15px;
+    letter-spacing: 0.12em;
+    color: #080608;
+    background: linear-gradient(135deg, #8a6820, #c9a84c 40%, #f0d980 60%, #c9a84c 80%, #7a5c1e);
+    border: none;
+    padding: 18px 52px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s;
+    clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+    disabled: false;
+  }
+
+  .btn-generate:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(201,168,76,0.4);
+    filter: brightness(1.1);
+  }
+
+  .btn-generate:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+  }
+
+  /* ── PROGRESS ── */
+  .progress-wrap {
+    display: none;
+    margin-top: 24px;
+    text-align: center;
+  }
+
+  .progress-wrap.visible { display: block; }
+
+  .progress-bar-track {
+    width: 100%; max-width: 400px;
+    height: 3px;
+    background: rgba(201,168,76,0.1);
+    border-radius: 2px;
+    margin: 12px auto 0;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold-light));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .progress-text {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+  }
+
+  /* ── RESULT ── */
+  .result-section {
+    display: none;
+  }
+
+  .result-section.visible { display: block; }
+
+  .result-canvas-wrap {
+    position: relative;
+    display: inline-block;
+    border: 1px solid rgba(201,168,76,0.25);
+    box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 30px rgba(201,168,76,0.1);
+  }
+
+  .result-canvas-wrap canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .result-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+
+  .btn-download {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #080608;
+    background: linear-gradient(135deg, #8a6820, #c9a84c 50%, #7a5c1e);
+    border: none;
+    padding: 14px 36px;
+    cursor: pointer;
+    transition: all 0.25s;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+  }
+
+  .btn-download:hover {
+    filter: brightness(1.15);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(201,168,76,0.3);
+  }
+
+  .btn-reset {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: none;
+    border: 1px solid rgba(201,168,76,0.2);
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .btn-reset:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold-dim);
+  }
+
+
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 32px 0;
+    border-top: 1px solid rgba(201,168,76,0.1);
+    margin-top: 80px;
+  }
+
+  .footer-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .footer-ornament .line {
+    height: 1px;
+    width: 80px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim));
+  }
+
+  .footer-text {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  /* ── LOADING SPINNER ── */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse-gold {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid rgba(201,168,76,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 10px;
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--bg-panel);
+    border: 1px solid var(--gold-dim);
+    padding: 14px 28px;
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--gold-light);
+    text-transform: uppercase;
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .panel { padding: 24px 18px; }
+    .steps-row { flex-wrap: wrap; gap: 8px; }
+    .step-connector { display: none; }
+    .bg-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-ornament">
+      <div class="line"></div>
+      <div class="diamond"></div>
+      <div class="line"></div>
+    </div>
+    <h1>Saints Relic<br>Generator</h1>
+    <p class="subtitle">Summon Your Legend &nbsp;·&nbsp; Forge Your Relic</p>
+  </header>
+
+  <!-- STEPS -->
+  <div class="steps-row">
+    <div class="step-item">
+      <div class="step-pill active" id="step1-pill">
+        <div class="step-num">I</div>
+        <div class="step-label">Upload NFT</div>
+      </div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item">
+      <div class="step-pill" id="step2-pill">
+        <div class="step-num">II</div>
+        <div class="step-label">Choose Scene</div>
+      </div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item">
+      <div class="step-pill" id="step3-pill">
+        <div class="step-num">III</div>
+        <div class="step-label">Generate</div>
+      </div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-item">
+      <div class="step-pill" id="step4-pill">
+        <div class="step-num">IV</div>
+        <div class="step-label">Download</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: UPLOAD -->
+  <div class="panel" id="uploadPanel">
+    <div class="panel-title">I. Upload Your NFT</div>
+
+    <!-- Upload zone (shown before upload) -->
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="upload-icon">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="8" width="48" height="48" rx="2" stroke="#c9a84c" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M32 40V24M32 24L26 30M32 24L38 30" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M22 44h20" stroke="#c9a84c" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="upload-title">Drag & Drop or Click to Upload</div>
+      <div class="upload-sub">PNG, JPG, GIF, WEBP — any NFT art accepted</div>
+    </div>
+
+    <!-- Preview after upload -->
+    <div class="uploaded-preview" id="uploadedPreview">
+      <img id="uploadedThumb" class="uploaded-thumb" src="" alt="NFT">
+      <div class="uploaded-info">
+        <div class="uploaded-name" id="uploadedName">—</div>
+        <div style="font-size:13px; color:var(--text-dim); margin-bottom:14px; font-style:italic;">Ready for processing</div>
+        <button class="btn-change" id="changeBtn">↺ Change Image</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: BACKGROUNDS -->
+  <div class="panel">
+    <div class="panel-title">II. Choose Your Sacred Background</div>
+    <div class="bg-grid" id="bgGrid">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- STEP 3: GENERATE -->
+  <div class="panel">
+    <div class="panel-title">III. Forge the Relic</div>
+
+    <div class="generate-wrap">
+      <button class="btn-generate" id="generateBtn" disabled>✦ Generate Relic ✦</button>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-text">
+        <span class="spinner"></span>
+        <span id="progressLabel">Removing background…</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: RESULT -->
+  <div class="panel result-section" id="resultSection">
+    <div class="panel-title">IV. Your Relic Awaits</div>
+    <div style="text-align:center;">
+      <div class="result-canvas-wrap">
+        <canvas id="resultCanvas"></canvas>
+      </div>
+      <div class="result-controls">
+        <button class="btn-download" id="downloadBtn">⬇ Download Relic</button>
+        <button class="btn-reset" id="resetBtn">Create Another</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-ornament">
+      <div class="line" style="background: linear-gradient(90deg, transparent, var(--gold-dim));"></div>
+      <div style="width:6px;height:6px;background:var(--gold-dim);transform:rotate(45deg);"></div>
+      <div class="line" style="background: linear-gradient(90deg, var(--gold-dim), transparent);"></div>
+    </div>
+    <div class="footer-text">Saints Relic Generator &nbsp;·&nbsp; Forge Your Legend</div>
+  </footer>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden canvas for processing -->
+<canvas id="workCanvas" style="display:none;"></canvas>
+
+<script>
+// ──────────────────────────────────────────────
+// BACKGROUND DEFINITIONS
+// Using high-quality Unsplash images as placeholder scenes
+// Replace URLs with your own background art
+// ──────────────────────────────────────────────
+const BG1_DATA = 'https://i.imgur.com/3zE10Tm.jpg';
+
+const BACKGROUNDS = [
+  {
+    id: 'bg1',
+    label: 'The Den',
+    url: BG1_DATA,
+    real: true
+  },
+  { id: 'cs1',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs2',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs3',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs4',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs5',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs6',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs7',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs8',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs9',  label: 'Coming Soon', url: null, real: false },
+  { id: 'cs10', label: 'Coming Soon', url: null, real: false },
+  { id: 'cs11', label: 'Coming Soon', url: null, real: false },
+];
+
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+let uploadedFile = null;
+let uploadedImage = null;
+let selectedBgId = null;
+let selectedBgImage = null;
+
+// ──────────────────────────────────────────────
+// INIT BACKGROUND GRID
+// ──────────────────────────────────────────────
+function initBgGrid() {
+  const grid = document.getElementById('bgGrid');
+  BACKGROUNDS.forEach(bg => {
+    const card = document.createElement('div');
+    card.dataset.id = bg.id;
+
+    if (!bg.real) {
+      // Coming Soon card
+      card.className = 'bg-card coming-soon';
+      const inner = document.createElement('div');
+      inner.className = 'coming-soon-inner';
+      const banner = document.createElement('div');
+      banner.className = 'coming-soon-banner';
+      const txt = document.createElement('span');
+      txt.className = 'coming-soon-text';
+      txt.textContent = 'Coming Soon';
+      banner.appendChild(txt);
+      inner.appendChild(banner);
+      card.appendChild(inner);
+    } else {
+      // Real background card
+      card.className = 'bg-card';
+      const img = document.createElement('img');
+      img.src = bg.url;
+      img.alt = bg.label;
+
+      const label = document.createElement('div');
+      label.className = 'bg-label';
+      label.textContent = bg.label;
+
+      card.appendChild(img);
+      card.appendChild(label);
+      card.addEventListener('click', () => selectBackground(bg, card));
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+function selectBackground(bg, card) {
+  document.querySelectorAll('.bg-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedBgId = bg.id;
+
+  // Preload — data URLs load instantly, no CORS needed
+  const img = new Image();
+  img.onload = () => { selectedBgImage = img; };
+  img.src = bg.url;
+
+  checkReady();
+  updateStep(2);
+}
+
+// ──────────────────────────────────────────────
+// UPLOAD HANDLING
+// ──────────────────────────────────────────────
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+const uploadedPreview = document.getElementById('uploadedPreview');
+const uploadedThumb = document.getElementById('uploadedThumb');
+const uploadedName = document.getElementById('uploadedName');
+const changeBtn = document.getElementById('changeBtn');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragging'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragging');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+changeBtn.addEventListener('click', () => {
+  uploadedPreview.classList.remove('visible');
+  uploadZone.style.display = '';
+  uploadedFile = null;
+  uploadedImage = null;
+  fileInput.value = '';
+  checkReady();
+  updateStep(1);
+});
+
+function handleFile(file) {
+  uploadedFile = file;
+  uploadedName.textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadedThumb.src = e.target.result;
+    const img = new Image();
+    img.onload = () => {
+      uploadedImage = img;
+      checkReady();
+      updateStep(selectedBgId ? 2 : 2);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+
+  uploadZone.style.display = 'none';
+  uploadedPreview.classList.add('visible');
+}
+
+// ──────────────────────────────────────────────
+// SCALE SLIDER
+// ──────────────────────────────────────────────
+
+
+// ──────────────────────────────────────────────
+// CHECK READY
+// ──────────────────────────────────────────────
+function checkReady() {
+  const ready = uploadedImage && selectedBgId;
+  document.getElementById('generateBtn').disabled = !ready;
+}
+
+// ──────────────────────────────────────────────
+// STEP INDICATOR
+// ──────────────────────────────────────────────
+function updateStep(activeStep) {
+  for (let i = 1; i <= 4; i++) {
+    const pill = document.getElementById(`step${i}-pill`);
+    pill.classList.remove('active', 'done');
+    if (i < activeStep) pill.classList.add('done');
+    else if (i === activeStep) pill.classList.add('active');
+  }
+}
+
+// ──────────────────────────────────────────────
+// BACKGROUND REMOVAL — CLIENT SIDE
+// Uses canvas-based color sampling to remove solid/near-solid backgrounds
+// For NFTs with transparent PNG, this is automatic
+// ──────────────────────────────────────────────
+async function removeBackground(img) {
+  const canvas = document.getElementById('workCanvas');
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  ctx.drawImage(img, 0, 0);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Check if image already has transparency (PNG with alpha)
+  let hasAlpha = false;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 250) { hasAlpha = true; break; }
+  }
+
+  if (hasAlpha) {
+    // Already has transparency — just return as-is
+    return canvas;
+  }
+
+  // Sample corner colors to detect background color
+  const corners = [
+    getPixel(data, w, 0, 0),
+    getPixel(data, w, w - 1, 0),
+    getPixel(data, w, 0, h - 1),
+    getPixel(data, w, w - 1, h - 1)
+  ];
+
+  // Find most common corner color (background)
+  const bgColor = dominantColor(corners);
+
+  // Flood-fill tolerance-based removal from edges
+  const tolerance = 35;
+  const visited = new Uint8Array(w * h);
+  const queue = [];
+
+  // Seed from all 4 edges
+  for (let x = 0; x < w; x++) {
+    queue.push(x, 0);
+    queue.push(x, h - 1);
+  }
+  for (let y = 0; y < h; y++) {
+    queue.push(0, y);
+    queue.push(w - 1, y);
+  }
+
+  let qi = 0;
+  while (qi < queue.length) {
+    const px = queue[qi++];
+    const py = queue[qi++];
+    if (px < 0 || px >= w || py < 0 || py >= h) continue;
+    const idx = py * w + px;
+    if (visited[idx]) continue;
+    visited[idx] = 1;
+
+    const i = idx * 4;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+
+    if (colorDistance(r, g, b, bgColor[0], bgColor[1], bgColor[2]) < tolerance) {
+      data[i + 3] = 0; // make transparent
+      queue.push(px - 1, py, px + 1, py, px, py - 1, px, py + 1);
+    }
+  }
+
+  // Feather edges slightly
+  featherEdges(data, w, h, 2);
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+function getPixel(data, w, x, y) {
+  const i = (y * w + x) * 4;
+  return [data[i], data[i + 1], data[i + 2]];
+}
+
+function colorDistance(r1, g1, b1, r2, g2, b2) {
+  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+}
+
+function dominantColor(colors) {
+  // Average the corner colors
+  const r = Math.round(colors.reduce((s, c) => s + c[0], 0) / colors.length);
+  const g = Math.round(colors.reduce((s, c) => s + c[1], 0) / colors.length);
+  const b = Math.round(colors.reduce((s, c) => s + c[2], 0) / colors.length);
+  return [r, g, b];
+}
+
+function featherEdges(data, w, h, radius) {
+  // Simple alpha erosion near transparent pixels
+  const copy = new Uint8ClampedArray(data);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (copy[i + 3] > 0) {
+        // Check neighbors
+        let minAlpha = copy[i + 3];
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+              const ni = (ny * w + nx) * 4;
+              if (copy[ni + 3] === 0) {
+                minAlpha = Math.min(minAlpha, 80);
+              }
+            }
+          }
+        }
+        data[i + 3] = minAlpha;
+      }
+    }
+  }
+}
+
+// ──────────────────────────────────────────────
+// COMPOSITE — draw character onto background
+// ──────────────────────────────────────────────
+async function composite(charCanvas, bgImg, scale) {
+  const OUT_W = 1000;
+  const OUT_H = 1000;
+
+  const result = document.getElementById('resultCanvas');
+  result.width = OUT_W;
+  result.height = OUT_H;
+  const ctx = result.getContext('2d');
+
+  // Draw background (cover fit)
+  const bw = bgImg.naturalWidth || bgImg.width;
+  const bh = bgImg.naturalHeight || bgImg.height;
+  const bRatio = bw / bh;
+  const oRatio = OUT_W / OUT_H;
+  let sx, sy, sw, sh;
+  if (bRatio > oRatio) {
+    sh = bh; sw = bh * oRatio;
+    sx = (bw - sw) / 2; sy = 0;
+  } else {
+    sw = bw; sh = bw / oRatio;
+    sx = 0; sy = (bh - sh) / 2;
+  }
+  ctx.drawImage(bgImg, sx, sy, sw, sh, 0, 0, OUT_W, OUT_H);
+
+  // Draw character centered, scaled
+  const cw = charCanvas.width;
+  const ch = charCanvas.height;
+  const maxSize = OUT_W * (scale / 100);
+  let drawW, drawH;
+  if (cw / ch > 1) {
+    drawW = maxSize;
+    drawH = maxSize * (ch / cw);
+  } else {
+    drawH = maxSize;
+    drawW = maxSize * (cw / ch);
+  }
+
+  const cx = (OUT_W - drawW) / 2;
+  const cy = (OUT_H - drawH) / 2;
+
+  // Subtle drop shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetX = 8;
+  ctx.shadowOffsetY = 12;
+  ctx.drawImage(charCanvas, cx, cy, drawW, drawH);
+  ctx.restore();
+
+  // Gold vignette overlay
+  const vignette = ctx.createRadialGradient(OUT_W / 2, OUT_H / 2, OUT_W * 0.3, OUT_W / 2, OUT_H / 2, OUT_W * 0.85);
+  vignette.addColorStop(0, 'transparent');
+  vignette.addColorStop(1, 'rgba(0,0,0,0.45)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, OUT_W, OUT_H);
+
+  // Subtle gold border glow
+  const borderGlow = ctx.createLinearGradient(0, 0, OUT_W, 0);
+  borderGlow.addColorStop(0, 'rgba(201,168,76,0.3)');
+  borderGlow.addColorStop(0.5, 'rgba(240,217,128,0.15)');
+  borderGlow.addColorStop(1, 'rgba(201,168,76,0.3)');
+  ctx.strokeStyle = borderGlow;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1.5, 1.5, OUT_W - 3, OUT_H - 3);
+}
+
+// ──────────────────────────────────────────────
+// GENERATE FLOW
+// ──────────────────────────────────────────────
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  if (!uploadedImage || !selectedBgId) return;
+
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const generateBtn = document.getElementById('generateBtn');
+
+  generateBtn.disabled = true;
+  progressWrap.classList.add('visible');
+  document.getElementById('resultSection').classList.remove('visible');
+  updateStep(3);
+
+  const setProgress = (pct, label) => {
+    progressFill.style.width = pct + '%';
+    progressLabel.textContent = label;
+  };
+
+  try {
+    setProgress(10, 'Analyzing NFT…');
+    await delay(300);
+
+    setProgress(35, 'Removing background…');
+    await delay(200);
+    const charCanvas = await removeBackground(uploadedImage);
+
+    setProgress(65, 'Loading sacred background…');
+    // Ensure background is loaded
+    if (!selectedBgImage) {
+      const bg = BACKGROUNDS.find(b => b.id === selectedBgId);
+      selectedBgImage = await loadImage(bg.url);
+    }
+    await delay(200);
+
+    setProgress(80, 'Compositing your relic…');
+    const scale = 100;
+    await composite(charCanvas, selectedBgImage, scale);
+    await delay(300);
+
+    setProgress(100, 'Complete ✦');
+    await delay(400);
+
+    progressWrap.classList.remove('visible');
+    document.getElementById('resultSection').classList.add('visible');
+    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateStep(4);
+
+    showToast('Your Relic has been forged');
+  } catch (err) {
+    console.error(err);
+    progressWrap.classList.remove('visible');
+    showToast('Error — please try again');
+    generateBtn.disabled = false;
+  }
+});
+
+// ──────────────────────────────────────────────
+// DOWNLOAD
+// ──────────────────────────────────────────────
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const canvas = document.getElementById('resultCanvas');
+  const link = document.createElement('a');
+  link.download = 'saints-relic.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('Relic saved to your collection');
+});
+
+// ──────────────────────────────────────────────
+// RESET
+// ──────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', () => {
+  uploadedFile = null;
+  uploadedImage = null;
+  selectedBgId = null;
+  selectedBgImage = null;
+
+  document.getElementById('fileInput').value = '';
+  document.getElementById('uploadedPreview').classList.remove('visible');
+  document.getElementById('uploadZone').style.display = '';
+  document.querySelectorAll('.bg-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('resultSection').classList.remove('visible');
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('progressFill').style.width = '0%';
+
+  updateStep(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ──────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      // Retry without CORS header (some CDNs)
+      const img2 = new Image();
+      img2.onload = () => resolve(img2);
+      img2.onerror = reject;
+      img2.src = url;
+    };
+    img.src = url;
+  });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ──────────────────────────────────────────────
+// BOOT
+// ──────────────────────────────────────────────
+initBgGrid();
+</script>
+</body>
+</html>
